@@ -1,0 +1,44 @@
+"""
+URL configuration for toko_bangunan project.
+
+The `urlpatterns` list routes URLs to views. For more information please see:
+    https://docs.djangoproject.com/en/5.2/topics/http/urls/
+Examples:
+Function views
+    1. Add an import:  from my_app import views
+    2. Add a URL to urlpatterns:  path('', views.home, name='home')
+Class-based views
+    1. Add an import:  from other_app.views import Home
+    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
+Including another URLconf
+    1. Import the include() function: from django.urls import include, path
+    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+"""
+from django.contrib import admin
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from produk.views import ProdukViewSet, tambah_produk# Import view untuk pengeluaran
+from django.conf import settings
+from django.conf.urls.static import static
+
+# Inisialisasi router
+router = DefaultRouter()
+router.register(r'produk', ProdukViewSet)
+
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    path('pengeluaran/', include('pengeluaran.urls')),
+]
+# Buat urlpatterns
+urlpatterns = [
+    path('admin/', admin.site.urls),  # URL untuk admin
+    path('api/', include(router.urls)),  # API produk dan pengeluaran
+    path('pengeluaran/', include('pengeluaran.urls')),
+    path('tambah-produk/', tambah_produk, name='tambah_produk'),  # URL untuk form produk
+ # URL untuk form pengeluaran
+]
+
+# Tambahkan static URL jika dalam mode DEBUG
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
