@@ -16,27 +16,13 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from produk.views import ProdukViewSet, tambah_produk# Import view untuk pengeluaran
 from django.conf import settings
 from django.conf.urls.static import static
 
-# Inisialisasi router
-router = DefaultRouter()
-router.register(r'produk', ProdukViewSet)
-
-
-urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('pengeluaran/', include('pengeluaran.urls')),
-]
 # Buat urlpatterns
 urlpatterns = [
     path('admin/', admin.site.urls),  # URL untuk admin
-    path('api/', include(router.urls)),  # API produk dan pengeluaran
-    path('pengeluaran/', include('pengeluaran.urls')),
-    path('tambah-produk/', tambah_produk, name='tambah_produk'),  # URL untuk form produk
- # URL untuk form pengeluaran
+    path('api/gudang/', include('gudang.urls')),  # URL untuk gudang
 ]
 
 # Tambahkan static URL jika dalam mode DEBUG
