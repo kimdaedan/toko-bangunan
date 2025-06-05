@@ -16,12 +16,18 @@ class Produk(models.Model):
         return self.nama
 
 class Pengeluaran(models.Model):
-    nama = models.CharField(max_length=100, default="Pengeluaran Umum")  # Tambahkan default
-    kategori = models.ForeignKey(Kategori, on_delete=models.CASCADE)
-    tanggal = models.DateField()
-    jumlah = models.DecimalField(max_digits=10, decimal_places=2)
-
+    # Cek nama field yang sebenarnya ada di model
+    # Contoh:
+    name = models.CharField(max_length=100)  # mungkin 'name' bukan 'nama'
+    date = models.DateTimeField(auto_now_add=True)# mungkin 'date' bukan 'tanggal'
+    category = models.CharField(max_length=100, default='uncategorized')  # mungkin 'category' bukan 'kategori'
+    amount = models.DecimalField(max_digits=10, decimal_places=2)  # mungkin 'amount' bukan 'jumlah'
+    payment_status = models.CharField(
+        max_length=20,
+        choices=[('paid', 'Paid'), ('unpaid', 'Unpaid')],
+        default='unpaid'
+    )
     def __str__(self):
-        return f"{self.nama} - {self.tanggal}"
+        return self.name
 
 
