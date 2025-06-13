@@ -9,3 +9,4 @@ class ProdukViewSet(viewsets.ModelViewSet):
 class PengeluaranViewSet(viewsets.ModelViewSet):
     queryset = Pengeluaran.objects.all()
     serializer_class = PengeluaranSerializer
+

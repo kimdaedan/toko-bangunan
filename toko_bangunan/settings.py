@@ -89,6 +89,14 @@ DATABASES = {
     }
 }
 
+# Untuk development, bolehkan semua origin
+CORS_ALLOW_ALL_ORIGINS = True
+
+# Atau spesifikkan domain Laravel Anda
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000", # Domain Laravel
+]
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
