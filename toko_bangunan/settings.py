@@ -40,11 +40,14 @@ INSTALLED_APPS = [
     'gudang',
     'kasir',
     'rest_framework',
+    'corsheaders',
+    'django_extensions',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -85,6 +88,14 @@ DATABASES = {
         'PORT': '3306',       # MySQL default port
     }
 }
+
+# Untuk development, bolehkan semua origin
+CORS_ALLOW_ALL_ORIGINS = True
+
+# Atau spesifikkan domain Laravel Anda
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:8000", # Domain Laravel
+]
 
 
 # Password validation
