@@ -2,7 +2,6 @@
 
 from django.db import migrations, models
 
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -10,15 +9,9 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RenameField(
+        migrations.RemoveField(
             model_name='pengeluaran',
-            old_name='jumlah',
-            new_name='amount',
-        ),
-        migrations.RenameField(
-            model_name='pengeluaran',
-            old_name='tanggal',
-            new_name='date',
+            name='tanggal',
         ),
         migrations.RemoveField(
             model_name='pengeluaran',
@@ -30,13 +23,22 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='pengeluaran',
+            name='amount',
+            field=models.DecimalField(max_digits=10, decimal_places=2, default=0),
+        ),
+        migrations.AddField(
+            model_name='pengeluaran',
+            name='date',
+            field=models.DateTimeField(auto_now_add=True),
+        ),
+        migrations.AddField(
+            model_name='pengeluaran',
             name='category',
-            field=models.CharField(default='uncategorized', max_length=100),
+            field=models.ForeignKey(to='gudang.Kategori', on_delete=models.SET_NULL, null=True),
         ),
         migrations.AddField(
             model_name='pengeluaran',
             name='name',
             field=models.CharField(default='Untitled', max_length=100),
-            preserve_default=False,
         ),
     ]

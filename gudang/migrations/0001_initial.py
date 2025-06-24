@@ -33,9 +33,14 @@ class Migration(migrations.Migration):
             name='Pengeluaran',
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('nama', models.CharField(default='Pengeluaran Umum', max_length=100)),
-                ('tanggal', models.DateField()),
-                ('jumlah', models.DecimalField(decimal_places=2, max_digits=10)),
+                ('name', models.CharField(default='Pengeluaran Umum', max_length=100)),
+                ('date', models.DateTimeField(auto_now_add=True)),  # Change to DateTimeField for better tracking
+                ('amount', models.DecimalField(decimal_places=2, max_digits=10)),  # Add amount field
+                ('payment_status', models.CharField(
+                    max_length=20,
+                    choices=[('paid', 'Paid'), ('unpaid', 'Unpaid')],
+                    default='unpaid'
+                )),
                 ('kategori', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='gudang.kategori')),
             ],
         ),

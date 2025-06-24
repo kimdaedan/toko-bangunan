@@ -18,10 +18,10 @@ class Produk(models.Model):
 class Pengeluaran(models.Model):
     # Cek nama field yang sebenarnya ada di model
     # Contoh:
-    name = models.CharField(max_length=100)  # mungkin 'name' bukan 'nama'
+    name = models.CharField(default='Untitled', max_length=100)
     date = models.DateTimeField(auto_now_add=True)# mungkin 'date' bukan 'tanggal'
     category = models.CharField(max_length=100, default='uncategorized')  # mungkin 'category' bukan 'kategori'
-    amount = models.DecimalField(max_digits=10, decimal_places=2)  # mungkin 'amount' bukan 'jumlah'
+    amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     payment_status = models.CharField(
         max_length=20,
         choices=[('paid', 'Paid'), ('unpaid', 'Unpaid')],

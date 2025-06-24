@@ -1,30 +1,25 @@
-from rest_framework import viewsets
+# views.py
+from rest_framework import viewsets, status
+from rest_framework.response import Response
 from .models import Customer, Transaksi
 from .serializers import CustomerSerializer, TransaksiSerializer
 
 class CustomerViewSet(viewsets.ModelViewSet):
-    queryset = Customer.objects.all()  # Pastikan ini ada
+    queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
 
-class TransaksiViewSet(viewsets.ViewSet):
-    # Jika TransaksiViewSet tidak menggunakan ModelViewSet, pastikan untuk mendefinisikan basename
-    def create(self, request):
-        serializer = TransaksiSerializer(data=request.data)
-        if serializer.is_valid():
-            produk_id = serializer.validated_data['produk'].id
-            jumlah = serializer.validated_data['jumlah']
+class TransaksiViewSet(viewsets.ModelViewSet):
+    queryset = Transaksi.objects.all()
+    serializer_class = TransaksiSerializer
 
-            try:
-                produk_obj = Produk.objects.get(id=produk_id)
-            except Produk.DoesNotExist:
-                return Response({'error': 'Produk tidak ditemukan'}, status=status.HTTP_404_NOT_FOUND)
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
 
-            if produk_obj.stok >= jumlah:
-                produk_obj.stok -= jumlah
-                produk_obj.save()
-                serializer.save()
-                return Response(serializer.data, status=status.HTTP_201_CREATED)
+        try:
+            self.perform_create(serializer)
+        except serializers.ValidationError as e:
+            return Response(e.detail, status=status.HTTP_400_BAD_REQUEST)
 
-            return Response({'error': 'Stok tidak cukup'}, status=status.HTTP_400_BAD_REQUEST)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
