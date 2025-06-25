@@ -23,7 +23,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('metode_pembayaran', models.CharField(max_length=50)),
                 ('jumlah', models.PositiveIntegerField()),
-                ('tanggal', models.DateTimeField(auto_now_add=True)),
+                #('tanggal', models.DateTimeField(auto_now_add=True)),
                 ('customer', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='kasir.customer')),
                 ('produk', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='gudang.produk')),
             ],
