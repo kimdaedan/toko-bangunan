@@ -1,16 +1,18 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import ClosingListView, CustomerViewSet
+# Tambahkan ClosingDetailAPIView ke import
+from .views import ClosingAPIView, CustomerViewSet, ExpenseViewSet, ClosingDetailAPIView
 
-# 1. Router HANYA untuk mendaftarkan kelas ViewSet
 router = DefaultRouter()
-router.register(r'customers', CustomerViewSet)   # Daftarkan CustomerViewSet di sini
+router.register(r'customers', CustomerViewSet)
+router.register(r'expenses', ExpenseViewSet)
 
-# 2. urlpatterns untuk semua URL Anda
 urlpatterns = [
-    # URL untuk ClosingListView (bukan ViewSet) menggunakan path() biasa
-    path('kasir/closing/', ClosingListView.as_view(), name='api-closing-list'),
+    # URL untuk daftar dan membuat transaksi baru
+    path('kasir/closing/', ClosingAPIView.as_view(), name='api-closing-list'),
 
-    # Sertakan URL dari router untuk CustomerViewSet
+    # URL BARU: Untuk detail, update, dan delete satu transaksi
+    path('kasir/closing/<int:pk>/', ClosingDetailAPIView.as_view(), name='api-closing-detail'),
+
     path('', include(router.urls)),
 ]
