@@ -23,7 +23,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),  # URL untuk admin
     path('api/gudang/', include('gudang.urls')),  # URL untuk gudang
-    path('api/kasir/', include('kasir.urls')),  # URL untuk kasir
+    path('api/', include('kasir.urls')),  # URL untuk kasir
 ]
 
 # Tambahkan static URL jika dalam mode DEBUG
