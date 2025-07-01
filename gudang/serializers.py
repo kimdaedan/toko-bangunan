@@ -10,7 +10,7 @@ class PengeluaranSerializer(serializers.ModelSerializer):
     date = serializers.DateTimeField()
     class Meta:
         model = Pengeluaran
-        fields = ['date', 'category', 'amount', 'payment_status']
+        fields = '__all__'
 
     def validate_date(self, value):
         return value.date()

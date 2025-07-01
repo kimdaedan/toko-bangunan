@@ -114,9 +114,34 @@ class ClosingAPIView(APIView):
 
 # ... (Kelas View lainnya tetap sama) ...
 class ClosingDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    Handles GET (satu), PUT, PATCH, dan DELETE untuk satu data Closing.
+    """
     queryset = Closing.objects.all()
     serializer_class = ClosingSerializer
-    # ...
+
+    def update(self, request, *args, **kwargs):
+        """
+        Kustomisasi metode update agar hanya field tertentu yang bisa diubah.
+        Ini akan mengabaikan validasi untuk field lain.
+        """
+        # Ambil instance objek yang akan diupdate
+        instance = self.get_object()
+
+        # Ambil hanya 'payment_method' dari data yang dikirim
+        payment_method = request.data.get('payment_method')
+
+        # Validasi sederhana
+        if payment_method is None:
+            return Response({'error': 'Field payment_method diperlukan.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update instance dan simpan
+        instance.payment_method = payment_method
+        instance.save()
+
+        # Kembalikan data yang sudah diupdate
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
 class CustomerViewSet(viewsets.ModelViewSet):
     queryset = Customer.objects.all().order_by('nama')
