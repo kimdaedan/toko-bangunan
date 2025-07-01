@@ -40,7 +40,7 @@ class ClosingAPIView(APIView):
             queryset = queryset.filter(tanggal__date__lte=end_date)
 
         # --- Filter Selesai ---
-
+# ini yang terbaru
         # Lakukan paginasi pada queryset yang SUDAH difilter
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(queryset, request, view=self)
