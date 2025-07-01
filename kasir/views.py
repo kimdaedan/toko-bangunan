@@ -11,28 +11,49 @@ from .pagination import CustomPaginationWithTotal
 
 
 class ClosingAPIView(APIView):
-    """
-    API View untuk menghandle:
-    - GET: Menampilkan daftar semua transaksi closing.
-    - POST: Membuat satu atau lebih entri closing dari keranjang kasir.
-    """
     pagination_class = CustomPaginationWithTotal
 
     def get(self, request, *args, **kwargs):
-        """Menangani GET request untuk menampilkan daftar semua closing."""
+        """Menangani GET request dengan filter manual dan paginasi."""
+        # Mulai dengan mengambil semua data transaksi
         queryset = Closing.objects.select_related('produk', 'customer').all().order_by('-tanggal')
 
+        # --- Logika Filter Manual ---
+
+        # Ambil parameter dari URL, contoh: ?customer_name=juna&start_date=...
+        search_query = request.query_params.get('customer_name', None)
+        start_date = request.query_params.get('start_date', None)
+        end_date = request.query_params.get('end_date', None)
+
+        # Terapkan filter jika parameter ada isinya
+        if search_query:
+            # Filter berdasarkan nama customer (case-insensitive)
+            # __nama adalah field di model Customer, __icontains adalah perintah 'contains'
+            queryset = queryset.filter(customer__nama__icontains=search_query)
+
+        if start_date:
+            # Filter tanggal lebih besar atau sama dengan start_date
+            queryset = queryset.filter(tanggal__date__gte=start_date)
+
+        if end_date:
+            # Filter tanggal lebih kecil atau sama dengan end_date
+            queryset = queryset.filter(tanggal__date__lte=end_date)
+
+        # --- Filter Selesai ---
+
+        # Lakukan paginasi pada queryset yang SUDAH difilter
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(queryset, request, view=self)
 
         if page is not None:
             serializer = ClosingSerializer(page, many=True)
+            # Beri tahu paginator untuk menghitung total dari queryset yang sudah difilter
             paginator.page.paginator.object_list = queryset
             return paginator.get_paginated_response(serializer.data)
 
+        # Fallback jika tidak ada paginasi
         serializer = ClosingSerializer(queryset, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
+        return Response(serializer.data)
     def post(self, request, *args, **kwargs):
         """Menangani POST request untuk membuat transaksi closing baru."""
         data = request.data
