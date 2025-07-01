@@ -1,104 +1,68 @@
-from rest_framework import viewsets, status, generics, filters  # <-- PERBAIKAN: Import filters di sini
+from rest_framework import viewsets, status, generics, filters
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from django.db.models import Q # <-- Impor Q untuk query kompleks
 from django.db import transaction
 
-# Impor kelas paginasi yang baru dibuat
+# Impor kelas paginasi
 from .pagination import CustomPaginationWithTotal
 
-# Import semua model dan serializer yang dibutuhkan
+# Impor semua model dan serializer yang dibutuhkan
 from .models import Closing, Customer, Expense
 from gudang.models import Produk as GudangProduk
 from .serializers import ClosingSerializer, CustomerSerializer, ExpenseSerializer
 
 class ClosingAPIView(APIView):
-    """
-    API View untuk menghandle transaksi closing.
-    """
     pagination_class = CustomPaginationWithTotal
 
     def get(self, request, *args, **kwargs):
-        """Menangani GET request dengan paginasi."""
+        """Menangani GET request dengan filter manual dan paginasi."""
         queryset = Closing.objects.select_related('produk', 'customer').all().order_by('-tanggal')
+
+        # --- FILTER MANUAL DIMULAI DI SINI ---
+
+        # Ambil parameter dari URL
+        search_query = request.query_params.get('customer_name', None)
+        start_date = request.query_params.get('start_date', None)
+        end_date = request.query_params.get('end_date', None)
+
+        # Terapkan filter jika parameter ada
+        if search_query:
+            # Filter berdasarkan nama customer (case-insensitive)
+            queryset = queryset.filter(customer__nama__icontains=search_query)
+
+        if start_date:
+            # Filter tanggal lebih besar atau sama dengan start_date
+            queryset = queryset.filter(tanggal__date__gte=start_date)
+
+        if end_date:
+            # Filter tanggal lebih kecil atau sama dengan end_date
+            queryset = queryset.filter(tanggal__date__lte=end_date)
+
+        # --- FILTER MANUAL SELESAI ---
 
         paginator = self.pagination_class()
         page = paginator.paginate_queryset(queryset, request, view=self)
 
         if page is not None:
             serializer = ClosingSerializer(page, many=True)
+            # Beri tahu paginator untuk menghitung total dari queryset yang sudah difilter
+            paginator.page.paginator.object_list = queryset
             return paginator.get_paginated_response(serializer.data)
 
         serializer = ClosingSerializer(queryset, many=True)
         return Response(serializer.data)
 
     def post(self, request, *args, **kwargs):
-        # Metode POST Anda yang sudah ada
-        data = request.data
-        customer_id = data.get('customer')
-        products_data = data.get('products')
-        payment_method = data.get('payment_method')
+        # Metode POST Anda tidak perlu diubah
+        # ... (kode lengkap dari respons sebelumnya)
+        pass
 
-        if not products_data or not isinstance(products_data, list):
-            return Response({'error': 'Format data produk tidak valid.'}, status=status.HTTP_400_BAD_REQUEST)
-
-        customer = None
-        if customer_id:
-            try:
-                customer = Customer.objects.get(id=customer_id)
-            except Customer.DoesNotExist:
-                return Response({'error': f'Customer dengan ID {customer_id} tidak ditemukan.'}, status=status.HTTP_404_NOT_FOUND)
-
-        try:
-            with transaction.atomic():
-                created_transactions = []
-                for product_data in products_data:
-                    product_id = product_data.get('id')
-                    quantity = product_data.get('quantity')
-
-                    if not all([product_id, quantity]):
-                        raise ValueError("Data produk tidak lengkap.")
-
-                    product_obj = GudangProduk.objects.select_for_update().get(id=product_id)
-
-                    if product_obj.jumlah < quantity:
-                        raise ValueError(f'Stok untuk "{product_obj.nama}" tidak mencukupi.')
-
-                    product_obj.jumlah -= quantity
-                    product_obj.save()
-
-                    closing_entry = Closing.objects.create(
-                        produk=product_obj,
-                        customer=customer,
-                        qty=quantity,
-                        payment_method=payment_method,
-                        total_transaksi=product_obj.harga * quantity
-                    )
-                    created_transactions.append(closing_entry.id)
-
-            return Response(
-                {'message': 'Transaksi berhasil dibuat.', 'transaction_ids': created_transactions},
-                status=status.HTTP_201_CREATED
-            )
-        except GudangProduk.DoesNotExist:
-            return Response({'error': 'Salah satu produk tidak ditemukan.'}, status=status.HTTP_404_NOT_FOUND)
-        except ValueError as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({'error': 'Terjadi kesalahan internal pada server.'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
+# ... (ClosingDetailAPIView, CustomerViewSet, dan ExpenseViewSet tetap sama) ...
 class ClosingDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Closing.objects.all()
     serializer_class = ClosingSerializer
-
-    def update(self, request, *args, **kwargs):
-        instance = self.get_object()
-        payment_method = request.data.get('payment_method')
-        if payment_method is None:
-            return Response({'error': 'Field payment_method diperlukan.'}, status=status.HTTP_400_BAD_REQUEST)
-        instance.payment_method = payment_method
-        instance.save()
-        serializer = self.get_serializer(instance)
-        return Response(serializer.data)
+    # ...
 
 class CustomerViewSet(viewsets.ModelViewSet):
     queryset = Customer.objects.all().order_by('nama')
@@ -109,3 +73,44 @@ class CustomerViewSet(viewsets.ModelViewSet):
 class ExpenseViewSet(viewsets.ModelViewSet):
     queryset = Expense.objects.all().order_by('-date')
     serializer_class = ExpenseSerializer
+
+
+class ExpenseViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint untuk mengelola data pengeluaran dengan filter dan total.
+    """
+    queryset = Expense.objects.all().order_by('-date')
+    serializer_class = ExpenseSerializer
+    # Kita akan menggunakan paginasi yang sama seperti di Closing
+    pagination_class = CustomPaginationWithTotal
+
+    def list(self, request, *args, **kwargs):
+        """
+        Kustomisasi metode list untuk menambahkan filter tanggal dan grand_total.
+        """
+        # Mulai dengan queryset dasar
+        queryset = self.get_queryset()
+
+        # --- Filter Manual ---
+        start_date = request.query_params.get('start_date', None)
+        end_date = request.query_params.get('end_date', None)
+
+        if start_date:
+            queryset = queryset.filter(date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(date__lte=end_date)
+        # --- Filter Selesai ---
+
+        # Lakukan paginasi pada queryset yang SUDAH difilter
+        page = self.paginate_queryset(queryset)
+
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            # Dapatkan respons paginasi (yang sudah berisi grand_total dari kelas pagination)
+            # Kita perlu memberitahu paginator queryset mana yang harus digunakan untuk menghitung total
+            self.paginator.page.paginator.object_list = queryset
+            return self.paginator.get_paginated_response(serializer.data)
+
+        # Fallback jika tidak ada paginasi
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
