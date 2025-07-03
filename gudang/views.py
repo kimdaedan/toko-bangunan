@@ -1,12 +1,17 @@
-from rest_framework import viewsets
+from rest_framework import viewsets, status
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
 from datetime import timedelta
+from django.db.models import Sum
 
-# Impor model, serializer, dan paginasi
+# Impor model dan serializer dari aplikasi 'gudang'
 from .models import Produk, Pengeluaran
 from .serializers import ProdukSerializer, PengeluaranSerializer
 from .pagination import CustomPaginationWithTotal
+# Impor kelas paginasi kustom.
+from .pagination import CustomPaginationWithTotal
+
 class ProdukViewSet(viewsets.ModelViewSet):
     """
     API endpoint untuk mengelola data Produk.
@@ -14,6 +19,40 @@ class ProdukViewSet(viewsets.ModelViewSet):
     queryset = Produk.objects.all().order_by('nama')
     serializer_class = ProdukSerializer
 
+    @action(detail=True, methods=['post'])
+    def add_stock(self, request, pk=None):
+        """
+        Action kustom untuk menambah stok pada produk tertentu.
+        URL: /api/gudang/produk/{id}/add_stock/
+        """
+        try:
+            # Dapatkan objek produk yang akan diupdate
+            product = self.get_object()
+
+            # Ambil jumlah stok yang akan ditambahkan dari data request
+            quantity_to_add = request.data.get('quantity')
+
+            # Validasi input
+            if quantity_to_add is None:
+                return Response({'error': 'Jumlah (quantity) diperlukan.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                quantity_to_add = int(quantity_to_add)
+                if quantity_to_add <= 0:
+                    raise ValueError()
+            except (ValueError, TypeError):
+                return Response({'error': 'Jumlah (quantity) harus berupa angka positif.'}, status=status.HTTP_400_BAD_REQUEST)
+
+            # Tambah stok dan simpan
+            product.jumlah += quantity_to_add
+            product.save()
+
+            # Kembalikan data produk yang sudah diupdate
+            serializer = self.get_serializer(product)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 class PengeluaranViewSet(viewsets.ModelViewSet):
     """
     API endpoint untuk Pengeluaran dengan filter tanggal canggih.
@@ -21,6 +60,30 @@ class PengeluaranViewSet(viewsets.ModelViewSet):
     queryset = Pengeluaran.objects.all().order_by('-date')
     serializer_class = PengeluaranSerializer
     pagination_class = CustomPaginationWithTotal
+
+    def update(self, request, *args, **kwargs):
+        """
+        Kustomisasi metode update agar hanya bisa mengubah payment_status.
+        """
+        instance = self.get_object()
+
+        # Hanya proses field 'payment_status' dari data yang dikirim
+        new_status = request.data.get('payment_status')
+
+        # Validasi sederhana
+        if new_status not in ['paid', 'unpaid']:
+            return Response(
+                {'error': "Nilai status tidak valid. Gunakan 'paid' atau 'unpaid'."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Update instance dan simpan
+        instance.payment_status = new_status
+        instance.save()
+
+        # Kembalikan data yang sudah diupdate
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
