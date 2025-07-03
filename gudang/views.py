@@ -1,14 +1,12 @@
 from rest_framework import viewsets
 from rest_framework.response import Response
-from django.db.models import Sum
+from django.utils import timezone
+from datetime import timedelta
 
-# Impor model dan serializer dari aplikasi 'gudang'
+# Impor model, serializer, dan paginasi
 from .models import Produk, Pengeluaran
 from .serializers import ProdukSerializer, PengeluaranSerializer
-
-# Impor kelas paginasi kustom dari file pagination.py di dalam aplikasi gudang
 from .pagination import CustomPaginationWithTotal
-
 class ProdukViewSet(viewsets.ModelViewSet):
     """
     API endpoint untuk mengelola data Produk.
@@ -18,39 +16,53 @@ class ProdukViewSet(viewsets.ModelViewSet):
 
 class PengeluaranViewSet(viewsets.ModelViewSet):
     """
-    API endpoint untuk mengelola data Pengeluaran dengan filter dan total.
+    API endpoint untuk Pengeluaran dengan filter tanggal canggih.
     """
     queryset = Pengeluaran.objects.all().order_by('-date')
     serializer_class = PengeluaranSerializer
-    # Terapkan kelas paginasi kustom
     pagination_class = CustomPaginationWithTotal
 
     def list(self, request, *args, **kwargs):
-        """
-        Kustomisasi metode list untuk menambahkan filter tanggal dan grand_total.
-        """
-        # Mulai dengan queryset dasar
         queryset = self.get_queryset()
 
-        # --- Logika Filter Manual ---
+        # --- Logika Filter Baru ---
+        period = request.query_params.get('period', None)
         start_date = request.query_params.get('start_date', None)
         end_date = request.query_params.get('end_date', None)
 
-        if start_date:
-            queryset = queryset.filter(date__gte=start_date)
-        if end_date:
-            queryset = queryset.filter(date__lte=end_date)
+        today = timezone.now().date()
+
+        if period == 'today':
+            queryset = queryset.filter(date__date=today)
+        elif period == 'yesterday':
+            yesterday = today - timedelta(days=1)
+            queryset = queryset.filter(date__date=yesterday)
+        elif period == 'this_month':
+            queryset = queryset.filter(date__year=today.year, date__month=today.month)
+        elif period == 'last_month':
+            first_day_of_current_month = today.replace(day=1)
+            last_day_of_last_month = first_day_of_current_month - timedelta(days=1)
+            first_day_of_last_month = last_day_of_last_month.replace(day=1)
+            queryset = queryset.filter(date__date__range=(first_day_of_last_month, last_day_of_last_month))
+        elif period == 'this_year':
+            queryset = queryset.filter(date__year=today.year)
+        elif period == 'last_year':
+            last_year = today.year - 1
+            queryset = queryset.filter(date__year=last_year)
+        else:
+            # Gunakan custom date range jika 'period' tidak dipilih
+            if start_date:
+                queryset = queryset.filter(date__date__gte=start_date)
+            if end_date:
+                queryset = queryset.filter(date__date__lte=end_date)
         # --- Filter Selesai ---
 
-        # Lakukan paginasi pada queryset yang SUDAH difilter
         page = self.paginate_queryset(queryset)
 
         if page is not None:
             serializer = self.get_serializer(page, many=True)
-            # Beri tahu paginator queryset mana yang harus digunakan untuk menghitung total
             self.paginator.page.paginator.object_list = queryset
             return self.paginator.get_paginated_response(serializer.data)
 
-        # Fallback jika tidak ada paginasi
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
