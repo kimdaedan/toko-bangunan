@@ -1,4 +1,4 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
@@ -18,6 +18,12 @@ class ProdukViewSet(viewsets.ModelViewSet):
     """
     queryset = Produk.objects.all().order_by('nama')
     serializer_class = ProdukSerializer
+
+     # --- PERBAIKAN: Menambahkan fungsionalitas pencarian ---
+    filter_backends = [filters.SearchFilter]
+    # Tentukan field mana saja yang bisa dicari.
+    # Anda bisa menambahkan field lain jika perlu, misal: 'deskripsi'
+    search_fields = ['nama']
 
     @action(detail=True, methods=['post'])
     def add_stock(self, request, pk=None):
